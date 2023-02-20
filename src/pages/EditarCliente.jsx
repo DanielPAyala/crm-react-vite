@@ -1,11 +1,24 @@
-import { useNavigate, Form, useActionData, redirect } from 'react-router-dom'
-import { agregarCliente } from '../data/clientes'
+import { Form, redirect, useActionData, useLoaderData, useNavigate } from 'react-router-dom'
+import { actualizarCliente, obtenerCliente } from '../data/clientes'
 
 // components
 import Error from '../components/Error'
 import Formulario from '../components/Formulario'
 
-export async function action({ request }) {
+export async function loader({ params }) {
+  const cliente = await obtenerCliente(params)
+
+  if (Object.values(cliente).length === 0) {
+    throw new Response('', {
+      status: 404,
+      statusText: 'No hay resultados'
+    })
+  }
+
+  return cliente
+}
+
+export async function action({ request, params }) {
   const formData = await request.formData()
   const data = Object.fromEntries(formData)
 
@@ -29,21 +42,20 @@ export async function action({ request }) {
     return errores
   }
 
-  await agregarCliente(data)
+  await actualizarCliente(params.id, data)
 
   return redirect('/')
 }
 
-function NuevoCliente() {
+function EditarCliente() {
   const errores = useActionData()
   const navigate = useNavigate()
+  const cliente = useLoaderData()
 
   return (
     <>
-      <h1 className='font-black text-4xl text-blue-900'>Nuevo Cliente</h1>
-      <p className='mt-3'>
-        Llena todos los campos para registrar un nuevo cliente
-      </p>
+      <h1 className='font-black text-4xl text-blue-900'>Editar Cliente</h1>
+      <p className='mt-3'>Actualiza los campos para editar un cliente</p>
 
       <div className='flex justify-end'>
         <button
@@ -59,17 +71,15 @@ function NuevoCliente() {
           errores.map((error, i) => <Error key={i}>{error}</Error>)}
 
         <Form method='post' noValidate>
-          <Formulario />
-
+          <Formulario cliente={cliente} />
           <input
             type='submit'
             className='mt-5 w-full bg-blue-800 p-3 uppercase font-bold text-white text-lg'
-            value='Registrar cliente'
+            value='Guardar Cambios'
           />
         </Form>
       </div>
     </>
   )
 }
-
-export default NuevoCliente
+export default EditarCliente
